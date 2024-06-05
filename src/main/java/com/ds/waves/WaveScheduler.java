@@ -7,7 +7,6 @@ import net.minecraft.world.World;
 import java.util.Random;
 
 public class WaveScheduler {
-
     private static final World world = Waves.SERVER.getOverworld();
 
     private static final Random random = new Random();
@@ -16,28 +15,62 @@ public class WaveScheduler {
 
     private static final int toTime = 23000;
 
-    public static void start() {
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
-            Waves.LOGGER.warn("TEST");
-            if (canSpawn() && shouldSpawn()) {
-                Waves.LOGGER.warn("WAVE");
-            }
+    private static long timeOfDay = 1;
+
+    private static int spawnTime = 0;
+
+    private static boolean checked;
+
+    private static boolean shouldSpawn;
+
+    public static void init() {
+        ServerTickEvents.END_WORLD_TICK.register(server -> {
+            tick();
         });
     }
 
-    private static boolean canSpawn() {
-        var timeOfDay = world.getTime() % 24000;
+    private static void tick() {
+        timeOfDay = world.getTimeOfDay() % 24000;
+        var canSpawn = canSpawn();
 
+        if (checked && !canSpawn) {
+            checked = false;
+
+            return;
+        }
+
+        if (!checked && canSpawn) {
+            checked = true;
+
+            shouldSpawn = shouldSpawn();
+
+            if (shouldSpawn) {
+                spawnTime = getRandomSpawnTime();
+                Waves.LOGGER.warn("SHOULD ON: " + spawnTime);
+
+            }
+
+            return;
+        }
+
+        if (shouldSpawn && timeOfDay >= spawnTime) {
+            shouldSpawn = false;
+            Waves.LOGGER.warn("WAVE");
+
+        }
+    }
+
+    private static boolean canSpawn() {
         // Minecraft considers night to be from 12541 to 23458 ticks into the day
-        return timeOfDay > fromTime && timeOfDay < toTime;
+        return timeOfDay >= fromTime && timeOfDay <= toTime;
     }
 
     private static boolean shouldSpawn() {
-        return random.nextFloat() < 0.33f;
+        return random.nextFloat() < 0.25f;
     }
 
-    private long generateRandomNightTime() {
+    private static int getRandomSpawnTime() {
         // Generate a random time during the night (e.g., between 13000 and 23000 ticks)
-        return 13000L + random.nextInt(10001);
+        return 13000 + random.nextInt(10000);
     }
 }
