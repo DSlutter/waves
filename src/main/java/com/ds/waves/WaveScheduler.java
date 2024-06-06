@@ -2,13 +2,10 @@ package com.ds.waves;
 
 import com.ds.Waves;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.world.World;
 
 import java.util.Random;
 
 public class WaveScheduler {
-    private static final World world = Waves.SERVER.getOverworld();
-
     private static final Random random = new Random();
 
     private static final int fromTime = 13000;
@@ -24,13 +21,11 @@ public class WaveScheduler {
     private static boolean shouldSpawn;
 
     public static void init() {
-        ServerTickEvents.END_WORLD_TICK.register(server -> {
-            tick();
-        });
+        ServerTickEvents.END_WORLD_TICK.register(server -> tick());
     }
 
     private static void tick() {
-        timeOfDay = world.getTimeOfDay() % 24000;
+        timeOfDay = Waves.OVERWORLD.getTimeOfDay() % 24000;
         var canSpawn = canSpawn();
 
         if (checked && !canSpawn) {
