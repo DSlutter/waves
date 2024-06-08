@@ -42,7 +42,6 @@ public class WaveScheduler {
             if (shouldSpawn) {
                 spawnTime = getRandomSpawnTime();
                 Waves.LOGGER.warn("SHOULD ON: " + spawnTime);
-
             }
 
             return;
@@ -51,7 +50,7 @@ public class WaveScheduler {
         if (shouldSpawn && timeOfDay >= spawnTime) {
             shouldSpawn = false;
             Waves.LOGGER.warn("WAVE");
-
+            WaveController.init();
         }
     }
 
