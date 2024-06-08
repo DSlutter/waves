@@ -1,5 +1,7 @@
 package com.ds;
 
+import com.ds.data.WaveConfig;
+import com.ds.models.WaveSpawn;
 import com.ds.waves.WaveScheduler;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -15,15 +17,26 @@ public class Waves implements ModInitializer {
 
     public static MinecraftServer SERVER;
 
-    public static final World OVERWORLD = Waves.SERVER.getOverworld();
+    public static World OVERWORLD;
+
+    public static WaveSpawn[] WAVE_SPAWNS;
 
 
     @Override
     public void onInitialize() {
+
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             SERVER = server;
-            WaveScheduler.init();
+            OVERWORLD = SERVER.getOverworld();
+
+            init();
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> SERVER = null);
+    }
+
+    private void init() {
+        WaveConfig.INSTANCE.init();
+        WAVE_SPAWNS = WaveConfig.INSTANCE.getWaveSpawnConfig();
+        WaveScheduler.init();
     }
 }
