@@ -1,13 +1,14 @@
 package com.ds.serializers;
 
 import com.ds.Waves;
-import com.ds.serializers.custom.IdentifierDeserializer;
+import com.ds.serializers.custom.EntityTypeDeserializer;
+import com.ds.serializers.custom.EntityTypeSerializer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import net.minecraft.util.Identifier;
+import net.minecraft.entity.EntityType;
 
 public class JsonSerializer implements ISerializer {
     private final JsonMapper mapper;
@@ -44,7 +45,8 @@ public class JsonSerializer implements ISerializer {
 
     private void configureMapper() {
         SimpleModule module = new SimpleModule()
-                .addDeserializer(Identifier.class, new IdentifierDeserializer());
+                .addSerializer((Class<EntityType<?>>) (Class<?>) EntityType.class, new EntityTypeSerializer())
+                .addDeserializer((Class<EntityType<?>>) (Class<?>) EntityType.class, new EntityTypeDeserializer());
 
         mapper.registerModule(module);
         mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, false);

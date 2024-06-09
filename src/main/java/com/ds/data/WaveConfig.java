@@ -7,8 +7,6 @@ import com.ds.serializers.ISerializer;
 import com.ds.serializers.JsonSerializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.EntityType;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -70,9 +68,9 @@ public class WaveConfig {
     }
 
     private List<WaveSpawn> createDefaultWaveSpawnConfig() {
-        Stack<Identifier> monsters = new Stack<>();
-        monsters.add(Registries.ENTITY_TYPE.getId(EntityType.ZOMBIE));
-        monsters.add(Registries.ENTITY_TYPE.getId(EntityType.SKELETON));
+        Stack<EntityType<?>> monsters = new Stack<>();
+        monsters.add(EntityType.ZOMBIE);
+        monsters.add(EntityType.SKELETON);
 
         Wave wave = new Wave(monsters);
         List<Wave> waves = List.of(wave);
