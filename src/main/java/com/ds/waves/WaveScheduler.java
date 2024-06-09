@@ -60,7 +60,7 @@ public class WaveScheduler {
     }
 
     private static boolean shouldSpawn() {
-        return random.nextFloat() < 0.25f;
+        return random.nextFloat() < 0.25f || true;
     }
 
     private static int getRandomSpawnTime() {
