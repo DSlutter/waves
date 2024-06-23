@@ -28,10 +28,6 @@ public class WaveConfig {
 
   private final ISerializer serializer;
 
-  public WaveConfig() {
-    serializer = new JsonSerializer();
-  }
-
   public void init() {
     if (file.exists()) {
       return;
@@ -52,6 +48,10 @@ public class WaveConfig {
 
       return new WaveSpawn[]{new WaveSpawn(new ArrayList<>())};
     }
+  }
+
+  private WaveConfig() {
+    serializer = new JsonSerializer();
   }
 
   private void writeDefaultWaveSpawnConfig() {

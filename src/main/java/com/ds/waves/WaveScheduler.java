@@ -1,47 +1,93 @@
 package com.ds.waves;
 
 import com.ds.Waves;
+import com.ds.constants.WaveConstants;
+import com.ds.exceptions.PlayerNotFoundException;
 import java.util.Random;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import net.minecraft.server.network.ServerPlayerEntity;
 
-public class WaveScheduler {
+public class WaveScheduler implements Runnable {
 
-  private static final Random random = new Random();
+  private final AtomicBoolean running = new AtomicBoolean(false);
 
-  private static final int fromTime = 13000;
+  private final ServerPlayerEntity serverPlayer;
 
-  private static final int toTime = 23000;
+  private final Random random = new Random();
 
-  private static long timeOfDay = 1;
+  private WaveController waveController;
 
-  private static int spawnTime = 0;
+  private int spawnTime = -1;
 
-  private static boolean checked;
+  private boolean checkedForSpawn;
 
-  private static boolean shouldSpawn;
+  private boolean shouldSpawn;
 
-  public static void init() {
-    ServerTickEvents.END_WORLD_TICK.register(server -> tick());
+  public WaveScheduler(ServerPlayerEntity serverPlayer) {
+    this.serverPlayer = serverPlayer;
   }
 
-  private static void tick() {
-    timeOfDay = Waves.OVERWORLD.getTimeOfDay() % 24000;
-    var canSpawn = canSpawn();
+  public ServerPlayerEntity getServerPlayer() {
+    return serverPlayer;
+  }
 
-    if (checked && !canSpawn) {
-      checked = false;
+  public void shutdown() {
+    Waves.LOGGER.debug("WaveScheduler: shutting down");
+    running.set(false);
+    if (waveController != null && waveController.isRunning()) {
+      waveController.shutdown();
+      waveController = null;
+    }
+  }
+
+  @Override
+  public void run() {
+    running.set(true);
+    try {
+      start();
+    } catch (InterruptedException | PlayerNotFoundException ex) {
+      Waves.LOGGER.error(ex.getMessage());
+      running.set(false);
+    }
+  }
+
+  private void start() throws InterruptedException, PlayerNotFoundException {
+    if (serverPlayer == null) {
+      throw new PlayerNotFoundException("WaveScheduler: player is null.");
+    }
+
+    while (running.get()) {
+      // There are 2 seconds between each update.
+      TimeUnit.SECONDS.sleep(2);
+      update();
+    }
+  }
+
+  private void update() {
+    if (waveController != null && waveController.isRunning()) {
+      return;
+    } else if (waveController != null) {
+      waveController = null;
+    }
+
+    var timeOfDay = Waves.OVERWORLD.getTimeOfDay() % 24000;
+    var canSpawn = canSpawn(timeOfDay);
+
+    if (checkedForSpawn && !canSpawn) {
+      checkedForSpawn = false;
 
       return;
     }
 
-    if (!checked && canSpawn) {
-      checked = true;
+    if (!checkedForSpawn && canSpawn) {
+      checkedForSpawn = true;
 
       shouldSpawn = shouldSpawn();
 
       if (shouldSpawn) {
         spawnTime = getRandomSpawnTime();
-        Waves.LOGGER.warn("SHOULD ON: " + spawnTime);
+        Waves.LOGGER.debug("SHOULD ON: " + spawnTime);
       }
 
       return;
@@ -49,22 +95,22 @@ public class WaveScheduler {
 
     if (shouldSpawn && timeOfDay >= spawnTime) {
       shouldSpawn = false;
-      Waves.LOGGER.warn("WAVE");
-      Thread.ofVirtual().start(new WaveController());
+      Waves.LOGGER.debug("WAVE");
+      waveController = new WaveController(serverPlayer);
+      Thread.ofVirtual().start(waveController);
     }
   }
 
-  private static boolean canSpawn() {
-    // Minecraft considers night to be from 12541 to 23458 ticks into the day
-    return timeOfDay >= fromTime && timeOfDay <= toTime;
+  private boolean canSpawn(long timeOfDay) {
+    return timeOfDay >= WaveConstants.SPAWN_FROM_TIME && timeOfDay <= WaveConstants.SPAWN_TILL_TIME;
   }
 
-  private static boolean shouldSpawn() {
-    return random.nextFloat() < 0.25f;
+  private boolean shouldSpawn() {
+    random.nextFloat();
+    return true;
   }
 
-  private static int getRandomSpawnTime() {
-    // Generate a random time during the night (e.g., between 13000 and 23000 ticks)
-    return 13000 + random.nextInt(10000);
+  private int getRandomSpawnTime() {
+    return random.nextInt(WaveConstants.SPAWN_FROM_TIME, WaveConstants.SPAWN_TILL_TIME);
   }
 }

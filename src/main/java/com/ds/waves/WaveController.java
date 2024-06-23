@@ -2,6 +2,7 @@ package com.ds.waves;
 
 import com.ds.Waves;
 import com.ds.data.WaveConfig;
+import com.ds.exceptions.PlayerNotFoundException;
 import com.ds.models.WaveSpawn;
 import com.ds.models.enums.WaveState;
 import java.util.ArrayList;
@@ -23,6 +24,8 @@ public class WaveController implements Runnable {
 
   private final AtomicBoolean running = new AtomicBoolean(false);
 
+  private final ServerPlayerEntity serverPlayer;
+
   private final Random random = new Random();
 
   private WaveSpawn waveSpawn;
@@ -35,24 +38,34 @@ public class WaveController implements Runnable {
 
   private short iteration;
 
-  private ServerPlayerEntity player;
+  public WaveController(ServerPlayerEntity serverPlayer) {
+    this.serverPlayer = serverPlayer;
+  }
 
   @Override
   public void run() {
     running.set(true);
     try {
       start();
-    } catch (InterruptedException iex) {
-      Waves.LOGGER.error(iex.getMessage());
+    } catch (InterruptedException | PlayerNotFoundException ex) {
+      Waves.LOGGER.error(ex.getMessage());
       running.set(false);
     }
   }
 
-  public void start() throws InterruptedException {
-    player = Waves.OVERWORLD.getPlayers().stream().findFirst().orElse(null);
-    if (player == null) {
-      Waves.LOGGER.error("No player found to spawn monsters near.");
-      return;
+  public boolean isRunning() {
+    return running.get();
+  }
+
+  public void shutdown() {
+    Waves.LOGGER.debug("WaveController: shutting down");
+    running.set(false);
+  }
+
+
+  private void start() throws InterruptedException, PlayerNotFoundException {
+    if (serverPlayer == null) {
+      throw new PlayerNotFoundException("WaveController: player is null.");
     }
     waveSpawn = WaveConfig.INSTANCE.getWaveSpawnConfig()[0];
     iteration = 0;
@@ -61,9 +74,7 @@ public class WaveController implements Runnable {
 
     while (running.get()) {
       // There are 2 seconds between each update.
-      Waves.LOGGER.warn("SLEEP 2 SECONDS");
       TimeUnit.SECONDS.sleep(2);
-      Waves.LOGGER.warn("WAKE UP AND PERFORM UPDATE");
       update();
     }
   }
@@ -79,7 +90,7 @@ public class WaveController implements Runnable {
   }
 
   private void started() {
-    Waves.LOGGER.error("WaveController: started");
+    Waves.LOGGER.debug("WaveController: started");
     var currentWave = waveSpawn.waves().get(iteration);
     monsters = currentWave.monsters();
 
@@ -87,12 +98,12 @@ public class WaveController implements Runnable {
   }
 
   private void ongoing() {
-    Waves.LOGGER.error("WaveController: ongoing");
+    Waves.LOGGER.debug("WaveController: ongoing");
     if (monsters.isEmpty()) {
-      Waves.LOGGER.error("WaveController: no more monsters to spawn");
+      Waves.LOGGER.debug("WaveController: no more monsters to spawn");
 
       if (waveCompleted()) {
-        Waves.LOGGER.error("WaveController: ALL ENTITIES KILLED");
+        Waves.LOGGER.debug("WaveController: all monsters killed");
         waveState = WaveState.DEFEATED;
       }
 
@@ -102,11 +113,11 @@ public class WaveController implements Runnable {
     var monster = monsters.pop();
     var entity = monster.create(Waves.OVERWORLD);
     if (entity == null) {
-      Waves.LOGGER.error("Entity is null.");
+      Waves.LOGGER.error("WaveController: entity is null.");
       return;
     }
 
-    var spawnPos = getRandomPositionAroundPlayer(player);
+    var spawnPos = getRandomPositionAroundPlayer(serverPlayer);
     entity.refreshPositionAndAngles(spawnPos, 0.0F, 0.0F);
     Waves.OVERWORLD.spawnEntity(entity);
 
@@ -114,31 +125,24 @@ public class WaveController implements Runnable {
   }
 
   private void defeated() throws InterruptedException {
-    Waves.LOGGER.error("WaveController: defeated");
+    Waves.LOGGER.debug("WaveController: defeated");
     iteration++;
     if (waveSpawn.waves().size() <= iteration) {
       waveState = WaveState.COMPLETED;
       return;
     }
 
-    displayTitle("Waiting on the next wave", player);
-    Waves.LOGGER.warn("SLEEP 6 SECONDS BEFORE NEXT WAVE");
+    displayTitle("Waiting on the next wave", serverPlayer);
     TimeUnit.SECONDS.sleep(6);
-    Waves.LOGGER.warn("WAKE UP AND PERFORM UPDATE");
     waveState = WaveState.STARTED;
   }
 
   private void completed() {
-    Waves.LOGGER.error("WaveController: completed");
-    displayTitle("Waves completed", player);
+    Waves.LOGGER.debug("WaveController: completed");
+    displayTitle("Waves completed", serverPlayer);
 
     waveState = WaveState.SHUTDOWN;
   }
-
-  private void shutdown() {
-    running.set(false);
-  }
-
 
   private boolean waveCompleted() {
     return createdMonsters.stream().noneMatch(Entity::isAlive);

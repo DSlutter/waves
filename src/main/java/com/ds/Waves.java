@@ -1,9 +1,9 @@
 package com.ds;
 
 import com.ds.data.WaveConfig;
-import com.ds.waves.WaveScheduler;
+import com.ds.listeners.PlayerConnectionListener;
+import com.ds.listeners.ServerLifecycleListener;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import org.slf4j.Logger;
@@ -19,21 +19,11 @@ public class Waves implements ModInitializer {
 
   public static ServerWorld OVERWORLD;
 
-
   @Override
   public void onInitialize() {
+    ServerLifecycleListener.INSTANCE.register();
+    PlayerConnectionListener.INSTANCE.register();
 
-    ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-      SERVER = server;
-      OVERWORLD = SERVER.getOverworld();
-
-      init();
-    });
-    ServerLifecycleEvents.SERVER_STOPPED.register(server -> SERVER = null);
-  }
-
-  private void init() {
     WaveConfig.INSTANCE.init();
-    WaveScheduler.init();
   }
 }
