@@ -6,6 +6,7 @@ import com.ds.waves.WaveScheduler;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,9 +18,7 @@ public class Waves implements ModInitializer {
 
     public static MinecraftServer SERVER;
 
-    public static World OVERWORLD;
-
-    public static WaveSpawn[] WAVE_SPAWNS;
+    public static ServerWorld OVERWORLD;
 
 
     @Override
@@ -36,7 +35,6 @@ public class Waves implements ModInitializer {
 
     private void init() {
         WaveConfig.INSTANCE.init();
-        WAVE_SPAWNS = WaveConfig.INSTANCE.getWaveSpawnConfig();
         WaveScheduler.init();
     }
 }

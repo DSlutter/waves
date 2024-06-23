@@ -4,5 +4,6 @@ public enum WaveState {
     STARTED,
     ONGOING,
     DEFEATED,
-    COMPLETED
+    COMPLETED,
+    SHUTDOWN
 }

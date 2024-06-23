@@ -50,7 +50,7 @@ public class WaveScheduler {
         if (shouldSpawn && timeOfDay >= spawnTime) {
             shouldSpawn = false;
             Waves.LOGGER.warn("WAVE");
-            WaveController.init();
+            Thread.ofVirtual().start(new WaveController());
         }
     }
 
