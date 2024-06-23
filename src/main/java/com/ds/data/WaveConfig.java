@@ -5,9 +5,6 @@ import com.ds.models.Wave;
 import com.ds.models.WaveSpawn;
 import com.ds.serializers.ISerializer;
 import com.ds.serializers.JsonSerializer;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.entity.EntityType;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -16,66 +13,70 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.entity.EntityType;
 
 public class WaveConfig {
 
-    public static final WaveConfig INSTANCE = new WaveConfig();
+  public static final WaveConfig INSTANCE = new WaveConfig();
 
-    private final String FILE_NAME = Waves.MOD_ID + ".json";
+  private final String FILE_NAME = Waves.MOD_ID + ".json";
 
-    private final Path path = FabricLoader.getInstance().getConfigDir().resolve(FILE_NAME);
+  private final Path path = FabricLoader.getInstance().getConfigDir().resolve(FILE_NAME);
 
-    private final File file = path.toFile();
+  private final File file = path.toFile();
 
-    private final ISerializer serializer;
+  private final ISerializer serializer;
 
-    public WaveConfig() {
-        serializer = new JsonSerializer();
+  public WaveConfig() {
+    serializer = new JsonSerializer();
+  }
+
+  public void init() {
+    if (file.exists()) {
+      return;
     }
 
-    public void init() {
-        if (file.exists()) {
-            return;
-        }
+    writeDefaultWaveSpawnConfig();
+  }
 
-        writeDefaultWaveSpawnConfig();
+  public WaveSpawn[] getWaveSpawnConfig() {
+    try {
+      var json = Files.readString(path);
+      return serializer.deserialize(WaveSpawn[].class, json);
+    } catch (IOException exception) {
+      String exceptionMessage = String.format(
+          "Exception thrown in WaveConfig.writeDefaultWaveData: %s",
+          exception.getMessage());
+      Waves.LOGGER.error(exceptionMessage);
+
+      return new WaveSpawn[]{new WaveSpawn(new ArrayList<>())};
     }
+  }
 
-    public WaveSpawn[] getWaveSpawnConfig() {
-        try {
-            var json = Files.readString(path);
-            return serializer.deserialize(WaveSpawn[].class, json);
-        } catch (IOException exception) {
-            String exceptionMessage = String.format("Exception thrown in WaveConfig.writeDefaultWaveData: %s",
-                    exception.getMessage());
-            Waves.LOGGER.error(exceptionMessage);
+  private void writeDefaultWaveSpawnConfig() {
+    List<WaveSpawn> defaultData = createDefaultWaveSpawnConfig();
 
-            return new WaveSpawn[]{new WaveSpawn(new ArrayList<>())};
-        }
+    try (FileWriter writer = new FileWriter(file)) {
+      var json = serializer.serialize(defaultData);
+      writer.write(json);
+    } catch (IOException exception) {
+      String exceptionMessage = String.format(
+          "Exception thrown in WaveConfig.writeDefaultWaveData: %s",
+          exception.getMessage());
+      Waves.LOGGER.error(exceptionMessage);
     }
+  }
 
-    private void writeDefaultWaveSpawnConfig() {
-        List<WaveSpawn> defaultData = createDefaultWaveSpawnConfig();
+  private List<WaveSpawn> createDefaultWaveSpawnConfig() {
+    Stack<EntityType<?>> monsters = new Stack<>();
+    monsters.add(EntityType.ZOMBIE);
+    monsters.add(EntityType.SKELETON);
 
-        try (FileWriter writer = new FileWriter(file)) {
-            var json = serializer.serialize(defaultData);
-            writer.write(json);
-        } catch (IOException exception) {
-            String exceptionMessage = String.format("Exception thrown in WaveConfig.writeDefaultWaveData: %s",
-                    exception.getMessage());
-            Waves.LOGGER.error(exceptionMessage);
-        }
-    }
+    Wave wave = new Wave(monsters);
+    List<Wave> waves = List.of(wave);
 
-    private List<WaveSpawn> createDefaultWaveSpawnConfig() {
-        Stack<EntityType<?>> monsters = new Stack<>();
-        monsters.add(EntityType.ZOMBIE);
-        monsters.add(EntityType.SKELETON);
-
-        Wave wave = new Wave(monsters);
-        List<Wave> waves = List.of(wave);
-
-        return List.of(new WaveSpawn(waves), new WaveSpawn(waves), new WaveSpawn(waves),
-                new WaveSpawn(waves), new WaveSpawn(waves), new WaveSpawn(waves));
-    }
+    return List.of(new WaveSpawn(waves), new WaveSpawn(waves), new WaveSpawn(waves),
+        new WaveSpawn(waves), new WaveSpawn(waves), new WaveSpawn(waves));
+  }
 }
